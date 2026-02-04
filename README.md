@@ -2,6 +2,37 @@
 
 A comprehensive template for supercharging Claude Code with hooks, sub-agents, custom commands, and more.
 
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+  - [New Project](#option-1-new-project)
+  - [Existing Project](#option-2-existing-project)
+  - [Manual Installation](#manual-installation-existing-project)
+- [Configuration](#configuration)
+  - [Environment Variables](#environment-variables)
+  - [Feature Toggles](#feature-toggles)
+- [Usage](#usage)
+  - [Starting a Session](#starting-a-session)
+  - [Verify Hooks Are Working](#verify-hooks-are-working)
+  - [Available Slash Commands](#available-slash-commands)
+  - [Using Sub-Agents](#using-sub-agents)
+  - [Output Styles](#output-styles)
+- [Project Structure](#project-structure)
+- [Customization](#customization)
+  - [Customize CLAUDE.md](#customize-claudemd)
+  - [Add Custom Agents](#add-custom-agents)
+  - [Add Custom Commands](#add-custom-commands)
+  - [Change Status Line](#change-status-line)
+- [Troubleshooting](#troubleshooting)
+- [Updating the Template](#updating-the-template)
+- [Security Notes](#security-notes)
+- [Examples](#examples)
+- [License](#license)
+
+---
+
 ## Features
 
 | Feature | Description |
