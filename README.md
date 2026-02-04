@@ -360,6 +360,33 @@ This preserves your customizations while adding new files.
 
 ---
 
+## Examples
+
+### Hello World
+
+A simple Python application demonstrating the template in action:
+
+```bash
+# Copy example to new location
+cp -r examples/hello-world ~/my-hello-world
+cd ~/my-hello-world
+
+# Add Claude Code hooks
+~/claude-code-template/setup.sh
+# Target directory: .
+# Choose [M]erge
+
+# Run the app
+python main.py --name Claude    # Hello, Claude!
+
+# Run tests
+uv run pytest tests/ -v         # 10 passed
+```
+
+See [`examples/hello-world/README.md`](examples/hello-world/README.md) for details.
+
+---
+
 ## License
 
 MIT - Use freely in your projects.
