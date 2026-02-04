@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Claude Code Dashboard</title>
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-blue: #58a6ff;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #a371f7;
+            --accent-cyan: #39c5cf;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header h1 span {
+            color: var(--accent-purple);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            grid-template-rows: auto 1fr;
+            gap: 16px;
+            padding: 16px;
+            height: calc(100vh - 65px);
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: var(--bg-tertiary);
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-body {
+            padding: 16px;
+            overflow-y: auto;
+            max-height: calc(100% - 45px);
+        }
+
+        /* Agent Flow Diagram */
+        .flow-diagram {
+            grid-column: 1 / -1;
+        }
+
+        .flow-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            padding: 20px;
+        }
+
+        .flow-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .flow-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .flow-icon.user { background: var(--accent-blue); }
+        .flow-icon.primary { background: var(--accent-purple); }
+        .flow-icon.subagent { background: var(--accent-cyan); }
+
+        .flow-icon.active {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px currentColor;
+        }
+
+        .flow-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            color: var(--text-secondary);
+            font-size: 20px;
+            padding: 0 8px;
+            min-width: 60px;
+            justify-content: center;
+        }
+
+        .flow-arrow.active {
+            color: var(--accent-green);
+        }
+
+        .flow-arrow svg {
+            width: 40px;
+            height: 20px;
+        }
+
+        /* Timeline */
+        .timeline {
+            grid-row: 2;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+
+        .timeline-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-top: 5px;
+            flex-shrink: 0;
+        }
+
+        .timeline-dot.prompt { background: var(--accent-blue); }
+        .timeline-dot.tool { background: var(--accent-orange); }
+        .timeline-dot.response { background: var(--accent-green); }
+        .timeline-dot.subagent { background: var(--accent-cyan); }
+        .timeline-dot.error { background: var(--accent-red); }
+
+        .timeline-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .timeline-type {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .timeline-type.prompt { color: var(--accent-blue); }
+        .timeline-type.tool { color: var(--accent-orange); }
+        .timeline-type.response { color: var(--accent-green); }
+        .timeline-type.subagent { color: var(--accent-cyan); }
+        .timeline-type.error { color: var(--accent-red); }
+
+        .timeline-time {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .timeline-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Hook Events */
+        .hook-events {
+            grid-row: 2;
+        }
+
+        .hook-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .hook-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .hook-badge.session { background: #1f6feb33; color: var(--accent-blue); }
+        .hook-badge.prompt { background: #a371f733; color: var(--accent-purple); }
+        .hook-badge.tool { background: #d2992233; color: var(--accent-orange); }
+        .hook-badge.stop { background: #3fb95033; color: var(--accent-green); }
+        .hook-badge.subagent { background: #39c5cf33; color: var(--accent-cyan); }
+        .hook-badge.error { background: #f8514933; color: var(--accent-red); }
+
+        .hook-name {
+            flex: 1;
+            color: var(--text-primary);
+        }
+
+        .hook-time {
+            color: var(--text-secondary);
+            font-size: 11px;
+        }
+
+        /* Session Info */
+        .session-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .session-stat {
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .session-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+
+        .session-stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        /* Setup Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal-content {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 16px;
+        }
+
+        .modal-content p {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .modal-content input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .modal-content button {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent-blue);
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-content button:hover {
+            opacity: 0.9;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="modal hidden" id="setupModal">
+        <div class="modal-content">
+            <h2>📁 Select Project Logs</h2>
+            <p>Enter the path to your Claude Code project's logs directory:</p>
+            <input type="text" id="logsPath" placeholder="/path/to/your/project/logs" value="">
+            <button onclick="startDashboard()">Start Dashboard</button>
+            <p style="margin-top: 16px; font-size: 12px;">
+                <strong>Note:</strong> Due to browser security, this dashboard works best when served via a local server.
+                Run: <code style="background: var(--bg-tertiary); padding: 2px 6px; border-radius: 4px;">python server.py /path/to/logs</code>
+            </p>
+        </div>
+    </div>
+
+    <header class="header">
+        <h1>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+            </svg>
+            <span>Claude Code</span> Dashboard
+        </h1>
+        <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span id="statusText">Polling every 2s</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Agent Flow Diagram -->
+        <div class="card flow-diagram">
+            <div class="card-header">
+                Agent Communication Flow
+                <span id="currentPhase" style="color: var(--text-secondary); font-weight: normal;">Idle</span>
+            </div>
+            <div class="flow-container">
+                <div class="flow-node">
+                    <div class="flow-icon user" id="flowUser">👤</div>
+                    <div class="flow-label">User</div>
+                </div>
+                <div class="flow-arrow" id="arrow1">
+                    <svg viewBox="0 0 40 20"><path d="M0 10 L30 10 M25 5 L30 10 L25 15" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+                </div>
+                <div class="flow-node">
+                    <div class="flow-icon primary" id="flowPrimary">🤖</div>
+                    <div class="flow-label">Primary Agent</div>
+                </div>
+                <div class="flow-arrow" id="arrow2">
+                    <svg viewBox="0 0 40 20"><path d="M0 10 L30 10 M25 5 L30 10 L25 15" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+                </div>
+                <div class="flow-node">
+                    <div class="flow-icon subagent" id="flowSubagent">🔧</div>
+                    <div class="flow-label">Sub-Agent</div>
+                </div>
+                <div class="flow-arrow" id="arrow3">
+                    <svg viewBox="0 0 40 20"><path d="M0 10 L30 10 M25 5 L30 10 L25 15" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+                </div>
+                <div class="flow-node">
+                    <div class="flow-icon primary" id="flowPrimary2">🤖</div>
+                    <div class="flow-label">Primary Agent</div>
+                </div>
+                <div class="flow-arrow" id="arrow4">
+                    <svg viewBox="0 0 40 20"><path d="M0 10 L30 10 M25 5 L30 10 L25 15" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+                </div>
+                <div class="flow-node">
+                    <div class="flow-icon user" id="flowUser2">👤</div>
+                    <div class="flow-label">User</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline -->
+        <div class="card timeline">
+            <div class="card-header">
+                Session Timeline
+                <span id="eventCount" style="color: var(--text-secondary); font-weight: normal;">0 events</span>
+            </div>
+            <div class="card-body" id="timelineBody">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12,6 12,12 16,14"/>
+                    </svg>
+                    <p>Waiting for events...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hook Events -->
+        <div class="card hook-events">
+            <div class="card-header">
+                Live Hook Events
+            </div>
+            <div class="card-body" id="hookEventsBody">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                    <p>No hooks fired yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pollInterval = null;
+        let lastData = {};
+        let allEvents = [];
+        let useApi = true;
+
+        // Auto-start: try API first, fall back to manual setup
+        async function init() {
+            try {
+                const response = await fetch('/api/config');
+                if (response.ok) {
+                    const config = await response.json();
+                    console.log('Server detected, using API mode');
+                    console.log('Logs path:', config.logs_path);
+                    useApi = true;
+                    startPolling();
+                    return;
+                }
+            } catch (e) {
+                console.log('No server detected, showing manual setup');
+            }
+            // Show manual setup modal if no server
+            document.getElementById('setupModal').classList.remove('hidden');
+        }
+
+        // Check for saved path
+        const savedPath = localStorage.getItem('claudeLogsPath');
+        if (savedPath) {
+            document.getElementById('logsPath').value = savedPath;
+        }
+
+        function startDashboard() {
+            const logsPath = document.getElementById('logsPath').value.trim();
+            if (!logsPath) {
+                alert('Please enter a logs path');
+                return;
+            }
+            localStorage.setItem('claudeLogsPath', logsPath);
+            document.getElementById('setupModal').classList.add('hidden');
+            useApi = false;
+            startPolling();
+        }
+
+        function startPolling() {
+            pollLogs();
+            pollInterval = setInterval(pollLogs, 2000);
+        }
+
+        async function pollLogs() {
+            if (useApi) {
+                // Use server API
+                try {
+                    const response = await fetch(`/api/logs?t=${Date.now()}`);
+                    if (response.ok) {
+                        const allLogs = await response.json();
+                        for (const [hookName, data] of Object.entries(allLogs)) {
+                            processLogData(hookName + '.json', data);
+                        }
+                    }
+                } catch (e) {
+                    console.error('API error:', e);
+                }
+            } else {
+                // Direct file access (requires CORS-enabled server)
+                const logsPath = localStorage.getItem('claudeLogsPath');
+                const logFiles = [
+                    'session_start.json',
+                    'session_end.json',
+                    'user_prompt_submit.json',
+                    'pre_tool_use.json',
+                    'post_tool_use.json',
+                    'stop.json',
+                    'subagent_start.json',
+                    'subagent_stop.json',
+                    'notification.json'
+                ];
+
+                for (const file of logFiles) {
+                    try {
+                        const response = await fetch(`${logsPath}/${file}?t=${Date.now()}`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            processLogData(file, data);
+                        }
+                    } catch (e) {
+                        // File doesn't exist or can't be read
+                    }
+                }
+            }
+
+            updateUI();
+        }
+
+        function processLogData(filename, data) {
+            const hookName = filename.replace('.json', '');
+
+            if (!Array.isArray(data)) return;
+
+            // Check for new entries
+            const lastCount = lastData[hookName]?.length || 0;
+            if (data.length > lastCount) {
+                const newEntries = data.slice(lastCount);
+                newEntries.forEach(entry => {
+                    allEvents.push({
+                        ...entry,
+                        hookType: hookName,
+                        timestamp: new Date()
+                    });
+                });
+            }
+
+            lastData[hookName] = data;
+        }
+
+        function updateUI() {
+            updateTimeline();
+            updateHookEvents();
+            updateFlowDiagram();
+            document.getElementById('eventCount').textContent = `${allEvents.length} events`;
+        }
+
+        function updateTimeline() {
+            const container = document.getElementById('timelineBody');
+            if (allEvents.length === 0) return;
+
+            const recentEvents = allEvents.slice(-20).reverse();
+
+            container.innerHTML = recentEvents.map(event => {
+                let type = 'prompt';
+                let text = '';
+
+                if (event.hookType === 'user_prompt_submit') {
+                    type = 'prompt';
+                    text = event.prompt || 'User prompt';
+                } else if (event.hookType.includes('tool')) {
+                    type = 'tool';
+                    text = event.tool_name || event.tool || 'Tool execution';
+                } else if (event.hookType === 'stop') {
+                    type = 'response';
+                    text = 'Agent completed';
+                } else if (event.hookType.includes('subagent')) {
+                    type = 'subagent';
+                    text = event.subagent_type || 'Sub-agent activity';
+                } else if (event.hookType.includes('session')) {
+                    type = 'prompt';
+                    text = event.hookType.replace('_', ' ');
+                }
+
+                const time = event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : '';
+
+                return `
+                    <div class="timeline-item">
+                        <div class="timeline-dot ${type}"></div>
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <span class="timeline-type ${type}">${event.hookType.replace(/_/g, ' ')}</span>
+                                <span class="timeline-time">${time}</span>
+                            </div>
+                            <div class="timeline-text">${escapeHtml(text)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateHookEvents() {
+            const container = document.getElementById('hookEventsBody');
+            if (allEvents.length === 0) return;
+
+            const recentHooks = allEvents.slice(-15).reverse();
+
+            container.innerHTML = recentHooks.map(event => {
+                let badgeClass = 'session';
+                if (event.hookType.includes('prompt')) badgeClass = 'prompt';
+                else if (event.hookType.includes('tool')) badgeClass = 'tool';
+                else if (event.hookType.includes('stop')) badgeClass = 'stop';
+                else if (event.hookType.includes('subagent')) badgeClass = 'subagent';
+
+                const time = event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : '';
+
+                return `
+                    <div class="hook-item">
+                        <span class="hook-badge ${badgeClass}">${badgeClass}</span>
+                        <span class="hook-name">${event.hookType}</span>
+                        <span class="hook-time">${time}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateFlowDiagram() {
+            // Reset all
+            document.querySelectorAll('.flow-icon').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.flow-arrow').forEach(el => el.classList.remove('active'));
+
+            if (allEvents.length === 0) {
+                document.getElementById('currentPhase').textContent = 'Idle';
+                return;
+            }
+
+            const lastEvent = allEvents[allEvents.length - 1];
+
+            if (lastEvent.hookType === 'user_prompt_submit') {
+                document.getElementById('flowUser').classList.add('active');
+                document.getElementById('arrow1').classList.add('active');
+                document.getElementById('currentPhase').textContent = 'User → Primary';
+            } else if (lastEvent.hookType.includes('tool') && !lastEvent.hookType.includes('subagent')) {
+                document.getElementById('flowPrimary').classList.add('active');
+                document.getElementById('currentPhase').textContent = 'Primary Processing';
+            } else if (lastEvent.hookType === 'subagent_start') {
+                document.getElementById('flowPrimary').classList.add('active');
+                document.getElementById('arrow2').classList.add('active');
+                document.getElementById('flowSubagent').classList.add('active');
+                document.getElementById('currentPhase').textContent = 'Primary → Sub-Agent';
+            } else if (lastEvent.hookType === 'subagent_stop') {
+                document.getElementById('flowSubagent').classList.add('active');
+                document.getElementById('arrow3').classList.add('active');
+                document.getElementById('flowPrimary2').classList.add('active');
+                document.getElementById('currentPhase').textContent = 'Sub-Agent → Primary';
+            } else if (lastEvent.hookType === 'stop') {
+                document.getElementById('flowPrimary2').classList.add('active');
+                document.getElementById('arrow4').classList.add('active');
+                document.getElementById('flowUser2').classList.add('active');
+                document.getElementById('currentPhase').textContent = 'Primary → User (Complete)';
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Allow Enter key to start
+        document.getElementById('logsPath').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') startDashboard();
+        });
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
