@@ -28,6 +28,7 @@ A comprehensive template for supercharging Claude Code with hooks, sub-agents, c
 - [Troubleshooting](#troubleshooting)
 - [Updating the Template](#updating-the-template)
 - [Security Notes](#security-notes)
+- [Dashboard](#dashboard)
 - [Examples](#examples)
 - [License](#license)
 
@@ -45,6 +46,7 @@ A comprehensive template for supercharging Claude Code with hooks, sub-agents, c
 | **Code Validators** | Auto-lint Python with Ruff and Ty |
 | **TTS System** | Voice notifications (3 providers) |
 | **LLM Integration** | AI-powered summaries and agent naming |
+| **Web Dashboard** | Real-time visualization of hook events and agent flow |
 
 ---
 
@@ -388,6 +390,65 @@ This preserves your customizations while adding new files.
 - Dangerous commands (rm -rf, etc.) are blocked
 - Credentials are gitignored by default
 - Review `.claude/hooks/pre_tool_use.py` for blocked patterns
+
+---
+
+## Dashboard
+
+A real-time web dashboard for visualizing hook events and agent communication flow.
+
+### Starting the Dashboard
+
+```bash
+# From the template directory
+cd ~/claude-code-template/dashboard
+
+# Start server with your project's logs
+python server.py /path/to/your/project/logs
+
+# Open in browser
+open http://localhost:8080
+```
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Agent Flow Diagram** | Visual representation: User → Primary → Sub-Agent → Primary → User |
+| **Live Hook Events** | Real-time stream with color-coded badges |
+| **Session Timeline** | Chronological view of prompts, tools, and responses |
+| **Auto-polling** | Updates every 2 seconds |
+
+### Agent Flow Visualization
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  👤 ──→ 🤖 ──→ 🔧 ──→ 🤖 ──→ 👤                            │
+│  User   Primary  Sub-Agent  Primary  User                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+The diagram highlights the active phase based on the most recent hook event:
+- **User → Primary**: `user_prompt_submit` fired
+- **Primary Processing**: Tool use in progress
+- **Primary → Sub-Agent**: `subagent_start` fired
+- **Sub-Agent → Primary**: `subagent_stop` fired
+- **Primary → User**: `stop` fired (complete)
+
+### API Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/logs` | All log files combined |
+| `GET /api/logs/<file>` | Specific log file (e.g., `/api/logs/stop.json`) |
+| `GET /api/config` | Server configuration and available logs |
+
+### Custom Port
+
+```bash
+# Use a different port
+python server.py /path/to/logs 3000
+```
 
 ---
 
